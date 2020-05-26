@@ -1,0 +1,126 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+rm(list=ls())
+library(readxl)
+library(Hmisc)
+library(MASS)
+library(caret)
+```
+
+
+```{r}
+#Has the online community increased user revenue?
+library('tidyverse')
+#load data
+data1=read.csv('data1.csv')
+data1$Month.After=str_replace(data1$Month.After, "[$]", "")%>%as.numeric()
+data1$Month.Before=str_replace(data1$Month.Before, "[$]", "")%>%as.numeric()
+dif=data1$Month.After-data1$Month.Before
+join=factor(data1$Joined.)
+
+#fit model
+lm_1=lm(dif~join)
+summary(lm_1)
+```
+
+
+```{r}
+#Has the online community led to increased retention? 
+mydata<-read_excel("Data.xlsx", sheet = 3)
+summary(mydata)
+sapply(mydata,sd)
+colnames(mydata) <- c('CustomerID','Joined','CustomerAgeWhenLaunching','Churn','AverageSpend')
+
+#Model Fitting
+mylogit<-glm(Churn~Joined+CustomerAgeWhenLaunching+AverageSpend,data=mydata,family=binomial(link="logit"))
+
+#coefficients
+summary(mylogit)
+
+#Confidence Intervals
+confint(mylogit)
+
+#exponentiated coefficients
+exp(mylogit$coefficients)
+
+AIC(mylogit)
+
+## Assessing model predictions and classification
+preddata<-with(mydata,data.frame(CustomerID,Joined,CustomerAgeWhenLaunching,AverageSpend))
+probchurn<-predict(mylogit,newdata=preddata,type="response")
+predchurn<-ifelse(probchurn > 0.5, 1,0)
+missclass<-predchurn!=mydata$Churn
+misclasserror<-mean(predchurn!=mydata$Churn)
+print(paste('Accuracy',1-misclasserror))
+
+confMat2<-confusionMatrix(data = as.factor(predchurn),reference = as.factor(mydata$Churn),positive = "1")
+confMat2
+```
+
+
+```{r}
+#Has the online community led to an increase in CLV?
+mydata<-read_excel("Data.xlsx", sheet = 3)
+summary(mydata)
+sapply(mydata,sd)
+colnames(mydata) <- c('CustomerID','Joined','CustomerAgeWhenLaunching','Churn','AverageSpend')
+
+## Assessing model
+preddata<-with(mydata,data.frame(CustomerID,Joined,CustomerAgeWhenLaunching,AverageSpend))
+probchurn<-predict(mylogit,newdata=preddata,type="response")
+retention_rate <- 1-probchurn
+margin <- mydata$AverageSpend*0.5
+CLV <- margin*(1/(1-retention_rate))
+mydata <- cbind(mydata, CLV)
+
+model <- lm(mydata$CLV ~ mydata$Joined + mydata$CustomerAgeWhenLaunching + mydata$AverageSpend)
+summary(model)
+```
+
+
+```{r}
+#Expanding using new variable: ‘Campaign/Organic’
+mydata5<-read_excel("Assignment 3 HW3_Data.xlsx", sheet = 4)
+summary(mydata5)
+sapply(mydata5,sd)
+colnames(mydata5) <- c('CampaignOrganic','CustomerID','MonthBefore','MonthAfter','CustomerAgeWhenLaunching','Joined','Churn','AverageSpend')
+
+#Model Fitting
+mylogit5<-glm(Churn~CampaignOrganic+Joined+CustomerAgeWhenLaunching+AverageSpend,data=mydata5,family=binomial(link="logit"))
+
+#coefficients
+summary(mylogit5)
+
+#Confidence Intervals
+confint(mylogit5)
+
+#exponentiated coefficients
+exp(mylogit5$coefficients)
+
+AIC(mylogit5)
+
+## Assessing model predictions and classification
+preddata5<-with(mydata5,data.frame(CampaignOrganic,CustomerID,MonthBefore,MonthAfter,CustomerAgeWhenLaunching,Joined,AverageSpend))
+probchurn5<-predict(mylogit5,newdata=preddata5,type="response")
+predchurn5<-ifelse(probchurn5 > 0.5, 1,0)
+missclass5<-predchurn5!=mydata5$Churn
+misclasserror5<-mean(predchurn5!=mydata5$Churn)
+print(paste('Accuracy',1-misclasserror5))
+
+confMat2<-confusionMatrix(data = as.factor(predchurn5),reference = as.factor(mydata5$Churn),positive = "1")
+confMat2
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
